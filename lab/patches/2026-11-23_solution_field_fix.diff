@@ -1,0 +1,12 @@
+--- lab/backup/2026-11-23_solution_field_fix/build_dataset.py	2026-11-23 16:23:12.996364200 +0800
++++ scripts/build_dataset.py	2026-11-23 16:23:18.955654300 +0800
+@@ -68,7 +68,8 @@
+         if h in seen:
+             continue
+         seen.add(h)
+-        rows.append({"problem": problem, "answer": ans, "source": src})
++        # solution 全文必须带上：SFT 臂的 completion 目标就是它（loss 只算 completion）
++        rows.append({"problem": problem, "answer": ans, "source": src, "solution": sol})
+ 
+     print(f"[numina] cleaned rows: {len(rows)}  by source: {dict(Counter(x['source'] for x in rows).most_common())}", flush=True)
+ 

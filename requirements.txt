@@ -1,0 +1,12 @@
+torch>=2.3
+transformers>=4.51
+trl>=0.17
+peft>=0.14
+accelerate>=1.0
+datasets>=2.20
+pandas>=2.0
+pyarrow>=15.0
+modelscope>=1.20
+tensorboard
+# 可选：vLLM colocate 加速 rollout（装不上就先用 HF generate，程序自动降级）
+# vllm>=0.8

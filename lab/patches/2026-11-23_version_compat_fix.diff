@@ -1,0 +1,94 @@
+--- lab/backup/2026-11-23_version_compat_fix/train_sft.py	2026-11-23 16:08:31.242389700 +0800
++++ scripts/train_sft.py	2026-11-23 16:08:46.338081600 +0800
+@@ -5,6 +5,7 @@
+   python scripts/train_sft.py                            # 5k 条 × 2 epoch，约 1 小时
+ """
+ import argparse
++import inspect
+ import json
+ import os
+ import sys
+@@ -19,6 +20,16 @@
+ SYSTEM = "你是一个严谨的数学解题助手。请一步步推理，并把最终答案放在 \\boxed{} 中。"
+ 
+ 
++def _filter_kwargs(cls, kwargs):
++    """版本兼容：按当前类签名过滤不支持的参数（README 坑 5，transformers/TRL 漂移）。"""
++    valid = inspect.signature(cls.__init__).parameters
++    ok = {k: v for k, v in kwargs.items() if k in valid}
++    dropped = sorted(set(kwargs) - set(ok))
++    if dropped:
++        print(f"[compat] {cls.__name__} 不支持，已丢弃: {dropped}", flush=True)
++    return ok
++
++
+ class SftJsonl(Dataset):
+     def __init__(self, path, tokenizer):
+         self.tok = tokenizer
+@@ -97,7 +108,7 @@
+     model.enable_input_require_grads()
+     model.print_trainable_parameters()
+ 
+-    targs = TrainingArguments(
++    targs_kwargs = dict(
+         output_dir=args.output_dir,
+         per_device_train_batch_size=args.batch,
+         gradient_accumulation_steps=1,
+@@ -113,6 +124,12 @@
+         remove_unused_columns=False,
+         dataloader_num_workers=2,
+     )
++    # warmup_ratio 被新版 transformers 移除时，等价换算成 warmup_steps（约 625 步 × 5% ≈ 31）
++    if "warmup_ratio" not in inspect.signature(TrainingArguments.__init__).parameters:
++        targs_kwargs.pop("warmup_ratio")
++        est_steps = max(1, round(len(rows) * args.epochs / args.batch))
++        targs_kwargs["warmup_steps"] = max(1, int(est_steps * 0.05))
++    targs = TrainingArguments(**_filter_kwargs(TrainingArguments, targs_kwargs))
+ 
+     trainer = Trainer(
+         model=model,
+--- lab/backup/2026-11-23_version_compat_fix/train_grpo.py	2026-11-23 16:08:31.249112800 +0800
++++ scripts/train_grpo.py	2026-11-23 16:08:59.043588400 +0800
+@@ -12,6 +12,7 @@
+   - save_total_limit=None：保留全部 checkpoint，防止最优点被轮转删除（上一个项目的教训）
+ """
+ import argparse
++import inspect
+ import os
+ import sys
+ 
+@@ -34,6 +35,16 @@
+ CORRECT_REWARD = 1.0
+ 
+ 
++def _filter_kwargs(cls, kwargs):
++    """版本兼容：按当前类签名过滤不支持的参数（README 坑 5，TRL GRPOConfig 跨版本增删）。"""
++    valid = inspect.signature(cls.__init__).parameters
++    ok = {k: v for k, v in kwargs.items() if k in valid}
++    dropped = sorted(set(kwargs) - set(ok))
++    if dropped:
++        print(f"[compat] {cls.__name__} 不支持，已丢弃: {dropped}", flush=True)
++    return ok
++
++
+ def build_prompt(problem: str, tokenizer) -> str:
+     messages = [
+         {"role": "system", "content": "你是一个严谨的数学解题助手。请一步步推理，并把最终答案放在 \\boxed{} 中。"},
+@@ -109,7 +120,7 @@
+     if args.vllm:
+         extra.update(use_vllm=True, vllm_mode="colocate", vllm_gpu_memory_utilization=0.25)
+ 
+-    cfg = GRPOConfig(
++    cfg = GRPOConfig(**_filter_kwargs(GRPOConfig, dict(
+         output_dir=args.output_dir,
+         per_device_train_batch_size=args.per_device_batch,
+         gradient_accumulation_steps=1,
+@@ -131,7 +142,7 @@
+         report_to=["tensorboard"],
+         seed=42,
+         **extra,
+-    )
++    )))
+ 
+     trainer = GRPOTrainer(
+         model=model,

@@ -1,0 +1,21 @@
+nohup: 忽略输入
+/usr/local/lib/python3.12/site-packages/trl/generation/__init__.py:22: UserWarning: TRL currently supports vLLM versions: 0.10.2, 0.11.0, 0.11.1, 0.11.2, 0.12.0. You have version 0.27.1 installed. We recommend installing a supported version to avoid compatibility issues.
+  if is_vllm_available():
+/usr/local/lib/python3.12/site-packages/trl/generation/vllm_client.py:39: UserWarning: TRL currently supports vLLM versions: 0.10.2, 0.11.0, 0.11.1, 0.11.2, 0.12.0. You have version 0.27.1 installed. We recommend installing a supported version to avoid compatibility issues.
+  if is_vllm_available():
+/usr/local/lib/python3.12/site-packages/trl/generation/vllm_generation.py:37: UserWarning: TRL currently supports vLLM versions: 0.10.2, 0.11.0, 0.11.1, 0.11.2, 0.12.0. You have version 0.27.1 installed. We recommend installing a supported version to avoid compatibility issues.
+  if is_vllm_available():
+[transformers] `Siglip2ImageProcessorFast` is deprecated. The `Fast` suffix for image processors has been removed; use `Siglip2ImageProcessor` instead.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/311 [00:00<?, ?it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 8754.73it/s]
+[compat] GRPOConfig 不支持，已丢弃: ['max_prompt_length']
+Traceback (most recent call last):
+  File "/mnt/workspace/grpo_proj/scripts/train_grpo.py", line 170, in <module>
+    main()
+  File "/mnt/workspace/grpo_proj/scripts/train_grpo.py", line 161, in main
+    resume_path = os.path.join(args.output_dir, max(cands, key=lambda d: int(d.split("-")[-1])))
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/workspace/grpo_proj/scripts/train_grpo.py", line 161, in <lambda>
+    resume_path = os.path.join(args.output_dir, max(cands, key=lambda d: int(d.split("-")[-1])))
+                                                                         ^^^^^^^^^^^^^^^^^^^^^
+ValueError: invalid literal for int() with base 10: '20_smoke'

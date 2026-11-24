@@ -1,0 +1,12 @@
+--- lab/backup/2026-11-23_cmath_golden_fix/build_dataset.py	2026-11-23 16:12:35.567169600 +0800
++++ scripts/build_dataset.py	2026-11-23 16:12:47.235666600 +0800
+@@ -98,7 +98,8 @@
+ 
+ def _norm_cmath_row(r: dict) -> dict | None:
+     q = r.get("question") or r.get("problem") or r.get("query")
+-    a = r.get("answer") or r.get("answer_value") or r.get("solution")
++    # evalscope/cmath 真实字段是 golden（2026-11-23 DSW 实测），answer 系字段是旧假设
++    a = r.get("answer") or r.get("golden") or r.get("answer_value") or r.get("solution")
+     if q is None or a is None:
+         return None
+     a = str(a)

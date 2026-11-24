@@ -1,0 +1,17 @@
+--- lab/backup/2026-11-23_localmodel_order_fix/train_grpo.py	2026-11-23 17:04:54.449358200 +0800
++++ scripts/train_grpo.py	2026-11-23 17:05:03.185487100 +0800
+@@ -25,11 +25,12 @@
+ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+ from judge import answers_equal, extract_boxed  # noqa: E402
+ 
++PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++OUT_DIR = os.path.join(PROJECT, "out", "grpo")
++
+ LOCAL_MODEL = os.path.join(PROJECT, "models", "qwen3-1.7b")  # setup.sh 的 modelscope 下载目录
+ # 离线优先：本地有就用本地，避免 transformers 去连 huggingface.co（大陆云不可达）
+ BASE_MODEL = LOCAL_MODEL if os.path.isdir(LOCAL_MODEL) else "Qwen/Qwen3-1.7B"
+-PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+-OUT_DIR = os.path.join(PROJECT, "out", "grpo")
+ 
+ FORMAT_REWARD = 0.2
+ CORRECT_REWARD = 1.0

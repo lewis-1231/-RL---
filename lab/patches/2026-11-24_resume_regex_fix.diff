@@ -1,0 +1,15 @@
+--- lab/backup/2026-11-24_resume_regex_fix/train_grpo.py	2026-11-24 09:42:37.624588800 +0800
++++ scripts/train_grpo.py	2026-11-24 09:42:46.449008600 +0800
+@@ -157,8 +157,10 @@
+     resume_path = None
+     if args.resume == "auto":
+         cands = [d for d in os.listdir(args.output_dir) if d.startswith("checkpoint-")] if os.path.isdir(args.output_dir) else []
+-        if cands:
+-            resume_path = os.path.join(args.output_dir, max(cands, key=lambda d: int(d.split("-")[-1])))
++        # 只认纯数字后缀的 checkpoint（人为改名的目录如 checkpoint-20_smoke 会被跳过）
++        nums = [(int(m.group(1)), d) for d in cands if (m := __import__("re").match(r"checkpoint-(\d+)$", d))]
++        if nums:
++            resume_path = os.path.join(args.output_dir, max(nums)[1])
+             print(f"[resume] from {resume_path}", flush=True)
+ 
+     trainer.train(resume_from_checkpoint=resume_path)

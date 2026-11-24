@@ -1,0 +1,49 @@
+nohup: 忽略输入
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/311 [00:00<?, ?it/s]Loading weights:   0%|          | 1/311 [00:00<00:35,  8.67it/s]Loading weights:  29%|██▉       | 91/311 [00:00<00:00, 500.92it/s]Loading weights:  57%|█████▋    | 178/311 [00:00<00:00, 662.51it/s]Loading weights:  83%|████████▎ | 258/311 [00:00<00:00, 711.26it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 654.44it/s]
+[adapter] out/grpo/checkpoint-200
+[data] test: 1098 rows
+[8/1098] acc=1.0000  9s
+[48/1098] acc=0.9375  75s
+[88/1098] acc=0.9545  127s
+[128/1098] acc=0.9609  178s
+[168/1098] acc=0.9524  246s
+[208/1098] acc=0.9519  316s
+[248/1098] acc=0.9516  381s
+[288/1098] acc=0.9549  471s
+[328/1098] acc=0.9604  536s
+[368/1098] acc=0.9592  605s
+[408/1098] acc=0.9583  676s
+[448/1098] acc=0.9531  781s
+[488/1098] acc=0.9529  869s
+[528/1098] acc=0.9489  973s
+[568/1098] acc=0.9401  1065s
+[608/1098] acc=0.9408  1178s
+[648/1098] acc=0.9414  1272s
+[688/1098] acc=0.9390  1397s
+[728/1098] acc=0.9354  1518s
+[768/1098] acc=0.9349  1674s
+[808/1098] acc=0.9295  1832s
+[848/1098] acc=0.9233  2008s
+[888/1098] acc=0.9155  2161s
+[928/1098] acc=0.9127  2305s
+[968/1098] acc=0.9029  2482s
+<string>:1: SyntaxWarning: 'int' object is not callable; perhaps you missed a comma?
+[1008/1098] acc=0.8978  2622s
+[1048/1098] acc=0.8922  2773s
+[1088/1098] acc=0.8851  2934s
+
+[RESULT] tag=test_grpo_ckpt200 split=test n=1098 acc=0.8852 elapsed=2968s -> /mnt/workspace/grpo_proj/results/cmath_test_test_grpo_ckpt200.csv
+[by grade]
+  1: 0.9573  (n=164)
+  2: 0.9565  (n=253)
+  3: 0.9156  (n=237)
+  4: 0.8917  (n=120)
+  5: 0.8095  (n=126)
+  6: 0.7424  (n=198)
+[by reasoning_step]
+  1: 0.9540  (n=391)
+  2: 0.8889  (n=441)
+  3: 0.8537  (n=123)
+  4: 0.8095  (n=42)
+  5: 0.6733  (n=101)

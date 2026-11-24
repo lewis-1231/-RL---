@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 大件：模型权重（本地/云端各自下载，不入库）
+models/
+out/
+*.safetensors
+*.bin
+*.tgz
+*.zip
+
+# 数据：由 scripts/setup.sh 拉取，不入库
+data/*.jsonl
+data/cmath/
+data/numina/
+
+# 根目录下的临时评测输出忽略（grpo_results/results 的证据 CSV 要入库）
+/results/
+lab/rollback_test/
+lab/smoke_artifacts/
+
+# 工作区私有记录
+.workbuddy/
+.DS_Store
+Thumbs.db

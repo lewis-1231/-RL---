@@ -1,0 +1,113 @@
+--- lab/backup/2026-11-23_basemodel_fix/train_grpo.py	2026-11-23 15:20:27.159495900 +0800
++++ scripts/train_grpo.py	2026-11-23 15:20:40.879047000 +0800
+@@ -24,7 +24,7 @@
+ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+ from judge import answers_equal, extract_boxed  # noqa: E402
+ 
+-BASE_MODEL = "Qwen/Qwen3-1.7B-Instruct-2507"
++BASE_MODEL = "Qwen/Qwen3-1.7B"  # 2507 refresh 只发了 4B/30B/235B，1.7B 无 Instruct-2507，用原版混合思考模型 + enable_thinking=False
+ PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ OUT_DIR = os.path.join(PROJECT, "out", "grpo")
+ 
+@@ -37,7 +37,9 @@
+         {"role": "system", "content": "你是一个严谨的数学解题助手。请一步步推理，并把最终答案放在 \\boxed{} 中。"},
+         {"role": "user", "content": problem},
+     ]
+-    return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
++    return tokenizer.apply_chat_template(
++        messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
++    )
+ 
+ 
+ def correctness_reward(prompts, completions, answer=None, **kwargs):
+--- lab/backup/2026-11-23_basemodel_fix/train_sft.py	2026-11-23 15:20:27.180613900 +0800
++++ scripts/train_sft.py	2026-11-23 15:20:41.062491900 +0800
+@@ -33,7 +33,9 @@
+             {"role": "system", "content": SYSTEM},
+             {"role": "user", "content": r["problem"]},
+         ]
+-        prompt = self.tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
++        prompt = self.tok.apply_chat_template(
++            messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
++        )
+         return {"prompt": prompt, "completion": r["solution"]}
+ 
+ 
+@@ -57,7 +59,7 @@
+ 
+ def main():
+     ap = argparse.ArgumentParser()
+-    ap.add_argument("--model", default="Qwen/Qwen3-1.7B-Instruct-2507")
++    ap.add_argument("--model", default="Qwen/Qwen3-1.7B")
+     ap.add_argument("--train-file", default=os.path.join(PROJECT, "data", "train.jsonl"))
+     ap.add_argument("--output-dir", default=os.path.join(PROJECT, "out", "sft"))
+     ap.add_argument("--n-train", type=int, default=5000)
+--- lab/backup/2026-11-23_basemodel_fix/eval_cmath.py	2026-11-23 15:20:27.189230500 +0800
++++ scripts/eval_cmath.py	2026-11-23 15:22:03.206146500 +0800
+@@ -5,8 +5,8 @@
+   - cmath_test.jsonl 每个模型只允许评一次，且只评最终选定的那个 checkpoint
+ 
+ 用法：
+-  python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 --split dev --tag base
+-  python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 \
++  python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B --split dev --tag base
++  python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B \
+       --adapter out/grpo/checkpoint-500 --split test --tag grpo_ckpt500
+ """
+ import argparse
+@@ -91,7 +91,7 @@
+                 tok.apply_chat_template(
+                     [{"role": "system", "content": SYSTEM},
+                      {"role": "user", "content": r["question"]}],
+-                    tokenize=False, add_generation_prompt=True,
++                    tokenize=False, add_generation_prompt=True, enable_thinking=False,
+                 )
+                 for r in chunk
+             ]
+--- lab/backup/2026-11-23_basemodel_fix/setup.sh	2026-11-23 15:20:27.211785400 +0800
++++ scripts/setup.sh	2026-11-23 15:20:41.229036500 +0800
+@@ -8,7 +8,7 @@
+ echo "== 2. 下载数据与基座（内网约 2-5 分钟）=="
+ modelscope download --dataset AI-MO/NuminaMath-CoT --local_dir data/numina
+ modelscope download --dataset evalscope/cmath      --local_dir data/cmath
+-modelscope download --model Qwen/Qwen3-1.7B-Instruct-2507 --local_dir models/qwen3-1.7b
++modelscope download --model Qwen/Qwen3-1.7B --local_dir models/qwen3-1.7b
+ 
+ echo "== 3. 构建训练/评测数据 =="
+ python scripts/build_dataset.py --n-train 5000 --n-val 500
+--- lab/backup/2026-11-23_basemodel_fix/README.md	2026-11-23 15:20:27.228308400 +0800
++++ README.md	2026-11-23 15:20:53.143854200 +0800
+@@ -7,7 +7,7 @@
+ 
+ | 臂 | 模型 | 说明 |
+ |---|---|---|
+-| A | Qwen3-1.7B-Instruct-2507 base | 基线 |
++| A | Qwen3-1.7B（原版混合思考，统一 enable_thinking=False） | 基线 |
+ | B | base + LoRA SFT（5k × 2 epoch） | 复现 SFT 负增益 |
+ | C | base + LoRA GRPO（可验证奖励） | 主实验 |
+ 
+@@ -46,11 +46,11 @@
+ python scripts/train_grpo.py --max-steps 500 --vllm --resume auto
+ 
+ # 4) 评测三臂（dev 评所有 checkpoint 选点；test 只评最终选定者）
+-python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 --split dev --tag base
+-python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 --adapter out/sft/final_adapter --split dev --tag sft
+-python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 --adapter out/grpo/checkpoint-500 --split dev --tag grpo_ckpt500
++python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B --split dev --tag base
++python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B --adapter out/sft/final_adapter --split dev --tag sft
++python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B --adapter out/grpo/checkpoint-500 --split dev --tag grpo_ckpt500
+ # 终报（test，一次）：
+-python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 --adapter <最终checkpoint> --split test --tag <臂名>_final
++python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B --adapter <最终checkpoint> --split test --tag <臂名>_final
+ ```
+ 
+ ## 三条硬纪律
+@@ -61,6 +61,8 @@
+ 
+ ## 已知坑（提前踩好）
+ 
++0. **基模没有 Instruct-2507**：2507 refresh 官方只发了 4B/30B-A3B/235B-A22B，1.7B 不存在该版本（ModelScope API 已核实）。本项目用原版 `Qwen/Qwen3-1.7B`（混合思考），所有 `apply_chat_template` 必须带 `enable_thinking=False`——漏了它，512 的 completion 预算会全被思考 token 吃掉，`\boxed{}` 永远出不来，奖励全 0。
++
+ 1. **组内全对/全错 → 优势全 0**：太简单的题学不到东西。看 reward 日志方差，长期全 0 的题源要过滤。
+ 2. **长度塌缩/膨胀**：盯 completion 长度曲线，异常膨胀通常伴随 reward hacking。
+ 3. **8 小时会话上限**：HF 路线 500 步约 8-12h，必须 `--resume auto`；vLLM 路线单会话内完成。实例重启后系统盘重置，pip 装的东西会丢（setup.sh 重跑即可），/mnt/workspace 持久化。**任何时候不要删除实例。**

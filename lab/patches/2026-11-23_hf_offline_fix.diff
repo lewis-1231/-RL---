@@ -1,0 +1,85 @@
+--- lab/backup/2026-11-23_hf_offline_fix/train_grpo.py	2026-11-23 15:50:54.490087500 +0800
++++ scripts/train_grpo.py	2026-11-23 15:51:27.120781400 +0800
+@@ -24,7 +24,9 @@
+ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+ from judge import answers_equal, extract_boxed  # noqa: E402
+ 
+-BASE_MODEL = "Qwen/Qwen3-1.7B"  # 2507 refresh 只发了 4B/30B/235B，1.7B 无 Instruct-2507，用原版混合思考模型 + enable_thinking=False
++LOCAL_MODEL = os.path.join(PROJECT, "models", "qwen3-1.7b")  # setup.sh 的 modelscope 下载目录
++# 离线优先：本地有就用本地，避免 transformers 去连 huggingface.co（大陆云不可达）
++BASE_MODEL = LOCAL_MODEL if os.path.isdir(LOCAL_MODEL) else "Qwen/Qwen3-1.7B"
+ PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ OUT_DIR = os.path.join(PROJECT, "out", "grpo")
+ 
+--- lab/backup/2026-11-23_hf_offline_fix/train_sft.py	2026-11-23 15:50:54.490996200 +0800
++++ scripts/train_sft.py	2026-11-23 15:51:27.215669200 +0800
+@@ -59,7 +59,8 @@
+ 
+ def main():
+     ap = argparse.ArgumentParser()
+-    ap.add_argument("--model", default="Qwen/Qwen3-1.7B")
++    _local = os.path.join(PROJECT, "models", "qwen3-1.7b")
++    ap.add_argument("--model", default=_local if os.path.isdir(_local) else "Qwen/Qwen3-1.7B")
+     ap.add_argument("--train-file", default=os.path.join(PROJECT, "data", "train.jsonl"))
+     ap.add_argument("--output-dir", default=os.path.join(PROJECT, "out", "sft"))
+     ap.add_argument("--n-train", type=int, default=5000)
+--- lab/backup/2026-11-23_hf_offline_fix/eval_cmath.py	2026-11-23 15:50:54.506567700 +0800
++++ scripts/eval_cmath.py	2026-11-23 15:51:42.795049600 +0800
+@@ -49,7 +49,9 @@
+ @torch.no_grad()
+ def main():
+     ap = argparse.ArgumentParser()
+-    ap.add_argument("--model", required=True)
++    _local = os.path.join(PROJECT, "models", "qwen3-1.7b")
++    ap.add_argument("--model", default=_local if os.path.isdir(_local) else "Qwen/Qwen3-1.7B",
++                    help="基模路径；默认本地 modelscope 下载目录，离线优先")
+     ap.add_argument("--adapter", default=None, help="LoRA adapter 目录（GRPO checkpoint / SFT final）")
+     ap.add_argument("--split", choices=["dev", "test"], default="dev")
+     ap.add_argument("--tag", required=True, help="结果文件命名，如 base / sft / grpo_ckpt500")
+--- lab/backup/2026-11-23_hf_offline_fix/setup.sh	2026-11-23 15:50:54.523815900 +0800
++++ scripts/setup.sh	2026-11-23 15:51:42.855323900 +0800
+@@ -1,6 +1,8 @@
+ #!/usr/bin/env bash
+ # 环境准备：依赖 + 数据 + 基座模型。建议在魔搭实例的 /mnt/workspace 下 clone 本项目后运行。
+ set -e
++# 兜底：万一某处仍去连 HF，走国内镜像（模型本身已走 modelscope 本地路径，正常用不到）
++export HF_ENDPOINT=https://hf-mirror.com
+ 
+ echo "== 1. 安装依赖 =="
+ pip install -r requirements.txt
+--- lab/backup/2026-11-23_hf_offline_fix/README.md	2026-11-23 15:52:32.897334400 +0800
++++ README.md	2026-11-23 15:51:59.508570900 +0800
+@@ -7,7 +7,7 @@
+ 
+ | 臂 | 模型 | 说明 |
+ |---|---|---|
+-| A | Qwen3-1.7B-Instruct-2507 base | 基线 |
++| A | Qwen3-1.7B（原版混合思考，统一 enable_thinking=False） | 基线 |
+ | B | base + LoRA SFT（5k × 2 epoch） | 复现 SFT 负增益 |
+ | C | base + LoRA GRPO（可验证奖励） | 主实验 |
+ 
+@@ -46,11 +46,11 @@
+ python scripts/train_grpo.py --max-steps 500 --vllm --resume auto
+ 
+ # 4) 评测三臂（dev 评所有 checkpoint 选点；test 只评最终选定者）
+-python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 --split dev --tag base
+-python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 --adapter out/sft/final_adapter --split dev --tag sft
+-python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 --adapter out/grpo/checkpoint-500 --split dev --tag grpo_ckpt500
++python scripts/eval_cmath.py --model models/qwen3-1.7b --split dev --tag base
++python scripts/eval_cmath.py --model models/qwen3-1.7b --adapter out/sft/final_adapter --split dev --tag sft
++python scripts/eval_cmath.py --model models/qwen3-1.7b --adapter out/grpo/checkpoint-500 --split dev --tag grpo_ckpt500
+ # 终报（test，一次）：
+-python scripts/eval_cmath.py --model Qwen/Qwen3-1.7B-Instruct-2507 --adapter <最终checkpoint> --split test --tag <臂名>_final
++python scripts/eval_cmath.py --model models/qwen3-1.7b --adapter <最终checkpoint> --split test --tag <臂名>_final
+ ```
+ 
+ ## 三条硬纪律
+@@ -61,6 +61,8 @@
+ 
+ ## 已知坑（提前踩好）
+ 
++0. **基模没有 Instruct-2507**：2507 refresh 官方只发了 4B/30B-A3B/235B-A22B，1.7B 不存在该版本（ModelScope API 已核实）。本项目用原版 `Qwen/Qwen3-1.7B`（混合思考），所有 `apply_chat_template` 必须带 `enable_thinking=False`——漏了它，512 的 completion 预算会全被思考 token 吃掉，`\boxed{}` 永远出不来，奖励全 0。
++
+ 1. **组内全对/全错 → 优势全 0**：太简单的题学不到东西。看 reward 日志方差，长期全 0 的题源要过滤。
+ 2. **长度塌缩/膨胀**：盯 completion 长度曲线，异常膨胀通常伴随 reward hacking。
+ 3. **8 小时会话上限**：HF 路线 500 步约 8-12h，必须 `--resume auto`；vLLM 路线单会话内完成。实例重启后系统盘重置，pip 装的东西会丢（setup.sh 重跑即可），/mnt/workspace 持久化。**任何时候不要删除实例。**
